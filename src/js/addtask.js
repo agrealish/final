@@ -13,7 +13,7 @@ var queryDB = function(querySt) {
         document.getElementById("error").innerHTML = "There was a problem with the query";
       }
     }
-    req.open('POST', 'query.php');
+    req.open('POST', 'http://web.engr.oregonstate.edu/~grealisa/CS290/final/query.php', true);
     req.send(querySt);
   }
 };

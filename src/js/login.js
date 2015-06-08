@@ -13,10 +13,10 @@ var queryDB = function(querySt) {
         document.getElementById("error").innerHTML = "There was a problem with the query";
       }
     }
-    req.open('POST', 'query.php');
+    req.open('POST', 'query.php', true);
     req.send(querySt);
   }
-};
+}
 
 function loginDB() {
   var noteForm = document.getElementById('loginform');

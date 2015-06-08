@@ -18,8 +18,37 @@ session_start();
     <meta charset="utf-8">
     <title>Project Management Task List</title>
     <link rel="stylesheet" href="style.css">
-    <script src='js/update.js'></script>
   </head>
+  <script>
+    var queryDB = function(querySt) {
+      var req = new XMLHttpRequest();
+      if(!req) {
+        document.getElementById("error").innerHTML = "Unable to create HttpRequest";
+      }
+      //from lecture on AJAX
+      req.onreadystatechange = function() {
+        if(this.readyState === 4) {
+          if(this.status === 200) {
+            document.getElementById("main").innerHTML = req.responseText;
+          }
+          else {
+            document.getElementById("error").innerHTML = "There was a problem with the query";
+          }
+        }
+      }
+      req.open('GET', 'http://web.engr.oregonstate.edu/~grealisa/CS290/final/query.php?' + querySt, true);
+      req.send();
+    }
+
+    //function to grab data from the form on updatenotes.php
+    function updaten() {
+      var noteForm = document.getElementById('updatenotes');
+      var params = 'type=update';
+      var params += '&id=' + noteForm.elements['taskid'].value;
+      var params += '&note=' + noteForm.elements['notes'].value;
+      queryDB(params);
+    }
+  </script>
   <body>
     <!--Div structure information found on http://www.456bereastreet.com/lab/developing_with_web_standards/csslayout/2-col/ -->
     <div id="wrap">

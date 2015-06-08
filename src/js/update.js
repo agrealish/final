@@ -14,8 +14,6 @@ var queryDB = function(querySt) {
       }
     }
     req.open('POST', 'query.php');
-    //below statement is from https://developer.mozilla.org/en-US/docs/AJAX/Getting_Started
-    req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     req.send(querySt);
   }
 };

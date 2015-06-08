@@ -19,8 +19,44 @@ session_start();
     <meta charset="utf-8">
     <title>Project Management Task List</title>
     <link rel="stylesheet" href="style.css">
-    <script src='js/login.js'></script>
   </head>
+  <script>
+    var queryDB = function(querySt) {
+      var req = new XMLHttpRequest();
+      if(!req) {
+        document.getElementById("error").innerHTML = "Unable to create HttpRequest";
+      }
+      //from lecture on AJAX
+      req.onreadystatechange = function() {
+        if(this.readyState === 4) {
+          if(this.status === 200) {
+            document.getElementById("error").innerHTML = req.responseText;
+          }
+          else {
+            alert = "There was a problem with the query";
+          }
+        }
+      }
+      req.open('GET', 'http://web.engr.oregonstate.edu/~grealisa/CS290/final/login.php?' + querySt, true);
+      req.send();
+    };
+
+    function loginDB() {
+      var noteForm = document.getElementById('loginform');
+      var params = 'type=login';
+      params += '&user=' + noteForm.elements['username'].value;
+      params += '&pass=' + noteForm.elements['password'].value;
+      queryDB(params);
+    }
+
+    function adduserDB() {
+      var noteForm = document.getElementById('adduser');
+      var params = 'type=adduser';
+      params += '&user=' + noteForm.elements['username'].value;
+      params += '&pass=' + noteForm.elements['password'].value;
+      queryDB(params);
+    }
+  </script>
   <body>
     <!--Div structure information found on http://www.456bereastreet.com/lab/developing_with_web_standards/csslayout/2-col/ -->
     <div id="wrap">
