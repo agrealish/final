@@ -18,7 +18,7 @@ var queryDB = function(querySt) {
   }
 };
 
-function showtasks() {
+function showprojs()() {
   var noteForm = document.getElementById('getInfo');
   var params = 'type=' + noteForm.elements['getData'].value;
   queryDB(params);

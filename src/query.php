@@ -217,6 +217,60 @@ if(session_status()==PHP_SESSION_ACTIVE) {
             }
           }
         }
+        
+        //add a task to the database
+        if($_REQUEST['type'] === 'addtask') {
+          $userid = $_REQUEST['user'];
+          $taskname = $_REQUEST['tname'];
+          $projname = $_REQUEST['pname'];
+          $taskdesc = $_REQUEST['tdesc'];
+          $duedate = $_REQUEST['due'];
+          $priority = $_REQUEST['priority'];
+          $tnotes = $_REQUEST['notes'];
+          $errtask = FALSE;
+          if(strlen($taskname) > 30) {
+            echo "<p>Your task name is too long.  Keep it under 30 characters.</p>";
+            $errtask = TRUE;
+          }
+          if($taskname === NULL || $taskname === "") {
+            "<p>You didn\'t enter a task name.  Try again.</p>"
+            $errtask = TRUE;
+          }
+          if(!$errtask) {
+            if(!($stmt = $mysqli->prepare("SELECT name FROM tasks WHERE name = ?"))) {
+                echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
+            }
+            if(!$stmt->bind_param("s", $taskname)) {
+              echo "Binding parameters failed: (" . $stmt->errno . ") " . $stmt->error;
+            }
+            if(!$stmt->execute()) {
+              echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+            }
+            if(!($check = $stmt->get_result()) {
+              echo "Getting results failed: (" . $stmt->errno . " " . $stmt->error;
+            }
+            $row = $check->fetch_assoc();
+            $stmt->close();
+            if($row['name'] === $taskname) {
+              echo "<p>That task name already exists, please try again.</p>"
+            }
+            else {
+              if(!($stmt = $mysqli->prepare("INSERT INTO tasks(user, name, project, desc, duedate, priority, notes) values (?,?,?,?,?,?,?)"))) {
+                echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
+              }
+              if(!$stmt->bind_param("sssssis", $userid, $taskname, $projname, $taskdesc, $duedate, $priority, $tnotes)) {
+                echo "Binding parameters failed: (" . $stmt->errno . ") " . $stmt->error;
+              }
+              if(!$stmt->execute()) {
+                echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+              }
+              else {
+                echo "<p>Task successfully added.</p>"
+              }
+              $stmt->close();
+            }
+          }
+        }
 
         //sort and print tasks due today or overdue
         if($_REQUEST['type'] === 'today') {
@@ -418,7 +472,49 @@ if(session_status()==PHP_SESSION_ACTIVE) {
         if($_REQUEST['type'] === 'complete') {
           $todaydt = date("m.d.Y");
           $username = $_REQUEST['userid'];
-          if(!($stmt = $mysqli->prepare("SELECT id, name, project, desc, duedate, priority, notes FROM tasks WHERE user = ? AND datedone <> '' ORDER BY datedone DESC"))) {
+          if(!($stmt = $mysqli->prepare("SELECT id, name, project, desc, duedate, datedone, priority, notes FROM tasks WHERE user = ? AND datedone <> '' ORDER BY datedone DESC"))) {
+              echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
+          }
+          if(!$stmt->bind_param("ss", $username, $todaydt)) {
+            echo "Binding parameters failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!$stmt->execute()) {
+            echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!($result = $stmt->get_result()) {
+            echo "Getting results failed: (" . $stmt->errno . " " . $stmt->error;
+          }
+          echo "<table>";
+          echo "<tr>";
+          echo "<th>Date Completed</th>";
+          echo "<th>Date Due</th>";
+          echo "<th>Task Name</th>";
+          echo "<th>Project Name</th>";
+          echo "<th>Priority</th>";
+          echo "<th>Description</th>";
+          echo "<th>Notes</th>";
+          echo "</tr>";
+          //read how to do this in comments on http://php.net/manual/en/mysqli-stmt.bind-result.php
+          while($myrow = $result->fetch_assoc()) {
+            echo "<tr id = '" . $myrow['id'] . ">";
+            echo "<td>" . $myrow['datedone'] . "</td>";
+            echo "<td>" . $myrow['duedate'] . "</td>";
+            echo "<td>" . $myrow['name'] . "</td>";
+            echo "<td>" . $myrow['project'] . "</td>";
+            echo "<td>" . $myrow['priority'] . "</td>";
+            echo "<td>" . $myrow['desc'] . "</td>";
+            echo "<td>" . $myrow['notes'] . "</td>";
+            echo "</tr>";
+          }
+          echo "</table>";
+          $stmt->close();
+        }
+        
+        //sort and print tasks associated with project where due date is today or overdue
+        if($_REQUEST['type'] === 'ptoday') {
+          $todaydt = date("m.d.Y");
+          $username = $_REQUEST['userid'];
+          if(!($stmt = $mysqli->prepare("SELECT tasks.id, tasks.user, tasks.name, tasks.project, tasks.desc, tasks.duedate, tasks.priority, tasks.notes FROM tasks INNER JOIN projects ON tasks.project=projects.project WHERE project.pm = ? AND tasks.datedone = '' and tasks.duedate <= ? ORDER BY tasks.duedate"))) {
               echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
           }
           if(!$stmt->bind_param("ss", $username, $todaydt)) {
@@ -435,6 +531,7 @@ if(session_status()==PHP_SESSION_ACTIVE) {
           echo "<th>Due Date</th>";
           echo "<th>Task Name</th>";
           echo "<th>Project Name</th>";
+          echo "<th>User Responsible</th>"
           echo "<th>Priority</th>";
           echo "<th>Description</th>";
           echo "<th>Notes</th>";
@@ -444,19 +541,217 @@ if(session_status()==PHP_SESSION_ACTIVE) {
           //read how to do this in comments on http://php.net/manual/en/mysqli-stmt.bind-result.php
           while($myrow = $result->fetch_assoc()) {
             if($myrow['duedate'] < $todaydt) {
-              echo "<tr id = '" . $myrow['id'] . " bgcolor='#FF0000'>";
+              echo "<tr id = '" . $myrow['tasks.id'] . " bgcolor='#FF0000'>";
             }
             else {
-              echo "<tr id = '" . $myrow['id'] . ">";
+              echo "<tr id = '" . $myrow['tasks.id'] . ">";
             }
-            echo "<td>" . $myrow['duedate'] . "</td>";
-            echo "<td>" . $myrow['name'] . "</td>";
-            echo "<td>" . $myrow['project'] . "</td>";
-            echo "<td>" . $myrow['priority'] . "</td>";
-            echo "<td>" . $myrow['desc'] . "</td>";
-            echo "<td>" . $myrow['notes'] . "</td>";
-            echo "<td><input type='button' onclick='updatenotes.php'>Update Notes</button></td>";
+            echo "<td>" . $myrow['tasks.duedate'] . "</td>";
+            echo "<td>" . $myrow['tasks.name'] . "</td>";
+            echo "<td>" . $myrow['tasks.project'] . "</td>";
+            echo "<td>" . $myrow['tasks.user'] . "</td>";
+            echo "<td>" . $myrow['tasks.priority'] . "</td>";
+            echo "<td>" . $myrow['tasks.desc'] . "</td>";
+            echo "<td>" . $myrow['tasks.notes'] . "</td>";
+            echo "<td><input type='button' onclick='updatePMnotes.php'>Update Notes</button></td>";
             echo "<td><input type='button' onclick='completeT(" . $myrow['id'] .")'>Complete Task</button></td>";
+            echo "</tr>";
+          }
+          echo "</table>";
+          $stmt->close();
+        }
+        
+        //sort and print tasks associated with project by due date
+        if($_REQUEST['type'] === 'pdate') {
+          $todaydt = date("m.d.Y");
+          $username = $_REQUEST['userid'];
+          if(!($stmt = $mysqli->prepare("SELECT tasks.id, tasks.user, tasks.name, tasks.project, tasks.desc, tasks.duedate, tasks.priority, tasks.notes FROM tasks INNER JOIN projects ON tasks.project=projects.project WHERE project.pm = ? AND tasks.datedone = '' and ORDER BY tasks.duedate"))) {
+              echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
+          }
+          if(!$stmt->bind_param("s", $username)) {
+            echo "Binding parameters failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!$stmt->execute()) {
+            echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!($result = $stmt->get_result()) {
+            echo "Getting results failed: (" . $stmt->errno . " " . $stmt->error;
+          }
+          echo "<table>";
+          echo "<tr>";
+          echo "<th>Due Date</th>";
+          echo "<th>Task Name</th>";
+          echo "<th>Project Name</th>";
+          echo "<th>User Responsible</th>"
+          echo "<th>Priority</th>";
+          echo "<th>Description</th>";
+          echo "<th>Notes</th>";
+          echo "<th>Update Notes</th>";
+          echo "<th>Complete Task</th>";
+          echo "</tr>";
+          //read how to do this in comments on http://php.net/manual/en/mysqli-stmt.bind-result.php
+          while($myrow = $result->fetch_assoc()) {
+            if($myrow['duedate'] < $todaydt) {
+              echo "<tr id = '" . $myrow['tasks.id'] . " bgcolor='#FF0000'>";
+            }
+            else {
+              echo "<tr id = '" . $myrow['tasks.id'] . ">";
+            }
+            echo "<td>" . $myrow['tasks.duedate'] . "</td>";
+            echo "<td>" . $myrow['tasks.name'] . "</td>";
+            echo "<td>" . $myrow['tasks.project'] . "</td>";
+            echo "<td>" . $myrow['tasks.user'] . "</td>";
+            echo "<td>" . $myrow['tasks.priority'] . "</td>";
+            echo "<td>" . $myrow['tasks.desc'] . "</td>";
+            echo "<td>" . $myrow['tasks.notes'] . "</td>";
+            echo "<td><input type='button' onclick='updatePMnotes.php'>Update Notes</button></td>";
+            echo "<td><input type='button' onclick='completeT(" . $myrow['id'] .")'>Complete Task</button></td>";
+            echo "</tr>";
+          }
+          echo "</table>";
+          $stmt->close();
+        }
+        
+        //sort and print tasks associated with project by user
+        if($_REQUEST['type'] === 'user') {
+          $todaydt = date("m.d.Y");
+          $username = $_REQUEST['userid'];
+          if(!($stmt = $mysqli->prepare("SELECT tasks.id, tasks.user, tasks.name, tasks.project, tasks.desc, tasks.duedate, tasks.priority, tasks.notes FROM tasks INNER JOIN projects ON tasks.project=projects.project WHERE project.pm = ? AND tasks.datedone = '' and ORDER BY tasks.user"))) {
+              echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
+          }
+          if(!$stmt->bind_param("s", $username)) {
+            echo "Binding parameters failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!$stmt->execute()) {
+            echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!($result = $stmt->get_result()) {
+            echo "Getting results failed: (" . $stmt->errno . " " . $stmt->error;
+          }
+          echo "<table>";
+          echo "<tr>";
+          echo "<th>User Responsible</th>"
+          echo "<th>Due Date</th>";
+          echo "<th>Task Name</th>";
+          echo "<th>Project Name</th>";
+          echo "<th>Priority</th>";
+          echo "<th>Description</th>";
+          echo "<th>Notes</th>";
+          echo "<th>Update Notes</th>";
+          echo "<th>Complete Task</th>";
+          echo "</tr>";
+          //read how to do this in comments on http://php.net/manual/en/mysqli-stmt.bind-result.php
+          while($myrow = $result->fetch_assoc()) {
+            if($myrow['duedate'] < $todaydt) {
+              echo "<tr id = '" . $myrow['tasks.id'] . " bgcolor='#FF0000'>";
+            }
+            else {
+              echo "<tr id = '" . $myrow['tasks.id'] . ">";
+            }
+            echo "<td>" . $myrow['tasks.user'] . "</td>";
+            echo "<td>" . $myrow['tasks.duedate'] . "</td>";
+            echo "<td>" . $myrow['tasks.name'] . "</td>";
+            echo "<td>" . $myrow['tasks.project'] . "</td>";
+            echo "<td>" . $myrow['tasks.priority'] . "</td>";
+            echo "<td>" . $myrow['tasks.desc'] . "</td>";
+            echo "<td>" . $myrow['tasks.notes'] . "</td>";
+            echo "<td><input type='button' onclick='updatePMnotes.php'>Update Notes</button></td>";
+            echo "<td><input type='button' onclick='completeT(" . $myrow['id'] .")'>Complete Task</button></td>";
+            echo "</tr>";
+          }
+          echo "</table>";
+          $stmt->close();
+        }
+        
+        //sort and print tasks associated with project by priority
+        if($_REQUEST['type'] === 'ppriority') {
+          $todaydt = date("m.d.Y");
+          $username = $_REQUEST['userid'];
+          if(!($stmt = $mysqli->prepare("SELECT tasks.id, tasks.user, tasks.name, tasks.project, tasks.desc, tasks.duedate, tasks.priority, tasks.notes FROM tasks INNER JOIN projects ON tasks.project=projects.project WHERE project.pm = ? AND tasks.datedone = '' and ORDER BY tasks.priority"))) {
+              echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
+          }
+          if(!$stmt->bind_param("s", $username)) {
+            echo "Binding parameters failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!$stmt->execute()) {
+            echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!($result = $stmt->get_result()) {
+            echo "Getting results failed: (" . $stmt->errno . " " . $stmt->error;
+          }
+          echo "<table>";
+          echo "<tr>";
+          echo "<th>Priority</th>";
+          echo "<th>Due Date</th>";
+          echo "<th>Task Name</th>";
+          echo "<th>Project Name</th>";
+          echo "<th>User Responsible</th>"
+          echo "<th>Description</th>";
+          echo "<th>Notes</th>";
+          echo "<th>Update Notes</th>";
+          echo "<th>Complete Task</th>";
+          echo "</tr>";
+          //read how to do this in comments on http://php.net/manual/en/mysqli-stmt.bind-result.php
+          while($myrow = $result->fetch_assoc()) {
+            if($myrow['duedate'] < $todaydt) {
+              echo "<tr id = '" . $myrow['tasks.id'] . " bgcolor='#FF0000'>";
+            }
+            else {
+              echo "<tr id = '" . $myrow['tasks.id'] . ">";
+            }
+            echo "<td>" . $myrow['tasks.priority'] . "</td>";
+            echo "<td>" . $myrow['tasks.duedate'] . "</td>";
+            echo "<td>" . $myrow['tasks.name'] . "</td>";
+            echo "<td>" . $myrow['tasks.project'] . "</td>";
+            echo "<td>" . $myrow['tasks.user'] . "</td>";
+            echo "<td>" . $myrow['tasks.desc'] . "</td>";
+            echo "<td>" . $myrow['tasks.notes'] . "</td>";
+            echo "<td><input type='button' onclick='updatePMnotes.php'>Update Notes</button></td>";
+            echo "<td><input type='button' onclick='completeT(" . $myrow['id'] .")'>Complete Task</button></td>";
+            echo "</tr>";
+          }
+          echo "</table>";
+          $stmt->close();
+        }
+        
+        //sort and print tasks associated with project only showing completed
+        if($_REQUEST['type'] === 'pdate') {
+          $todaydt = date("m.d.Y");
+          $username = $_REQUEST['userid'];
+          if(!($stmt = $mysqli->prepare("SELECT tasks.id, tasks.user, tasks.name, tasks.project, tasks.desc, tasks.duedate, tasks.datedone, tasks.priority, tasks.notes FROM tasks INNER JOIN projects ON tasks.project=projects.project WHERE project.pm = ? AND tasks.datedone <> '' and ORDER BY tasks.datedone DESC"))) {
+              echo "Prepare failed: (" . $mysqli->errno . ") " . $mysqli->error;
+          }
+          if(!$stmt->bind_param("s", $username)) {
+            echo "Binding parameters failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!$stmt->execute()) {
+            echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+          }
+          if(!($result = $stmt->get_result()) {
+            echo "Getting results failed: (" . $stmt->errno . " " . $stmt->error;
+          }
+          echo "<table>";
+          echo "<tr>";
+          echo "<th>Date Completed</th>";
+          echo "<th>Due Date</th>";
+          echo "<th>Task Name</th>";
+          echo "<th>Project Name</th>";
+          echo "<th>User Responsible</th>"
+          echo "<th>Priority</th>";
+          echo "<th>Description</th>";
+          echo "<th>Notes</th>";
+          echo "</tr>";
+          //read how to do this in comments on http://php.net/manual/en/mysqli-stmt.bind-result.php
+          while($myrow = $result->fetch_assoc()) {
+            echo "<tr id = '" . $myrow['tasks.id'] . ">";
+            echo "<td>" . $myrow['tasks.datedone'] . "</td>";
+            echo "<td>" . $myrow['tasks.duedate'] . "</td>";
+            echo "<td>" . $myrow['tasks.name'] . "</td>";
+            echo "<td>" . $myrow['tasks.project'] . "</td>";
+            echo "<td>" . $myrow['tasks.user'] . "</td>";
+            echo "<td>" . $myrow['tasks.priority'] . "</td>";
+            echo "<td>" . $myrow['tasks.desc'] . "</td>";
+            echo "<td>" . $myrow['tasks.notes'] . "</td>";
             echo "</tr>";
           }
           echo "</table>";

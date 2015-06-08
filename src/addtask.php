@@ -35,9 +35,36 @@ session_start();
         <br>
         <form id="addtask">
           <?php 
-            echo 'User: <input type="text", name="userident" value=' . $_SESSION['username'] .' readonly>';
+            echo 'User: <input type="text" name="userident" value=' . $_SESSION['username'] .' readonly>';
           ?>
-          <input type="text", 
+          Task Name: <input type="text" name="taskname" required>
+          Project: <select name="projname">
+            <?php 
+              $mysqli = new mysqli("oniddb.cws.oregonstate.edu", "grealisa-db", $password, "grealisa-db");
+              if(!$mysqli || $mysqli->connect_errno) {
+                echo "There was a connection error " . $mysqli->connect_errno . " " . $mysqli->connect_error;
+              }
+              $projects = $mysqli->query("SELECT DISTINCT project FROM projects ORDER BY project");
+              
+              while ($proj = $projects->fetch_assoc()){
+                if(!is_null($proj['project'])) {
+                  echo "<option value='" . $proj['project'] . "'>" . $proj['project'] . "</option>";
+                }
+              }
+            ?>
+          </select>
+          <div id="description">Description: <input type="text" name="taskdesc"></div>
+          Date Due: <input type="date" name="duedt">
+          <select name="priority">
+            <option value='1'>1</option>
+            <option value='2'>2</option>
+            <option value='3'>3</option>
+            <option value='4'>4</option>
+            <option value='5'>5</option>
+          </select>
+          <div id="notes">Enter Notes: <input type="text" name="notes"></div>
+          <button type="button" onclick="taskadd()">Add Task</button>
+        </form>
       </div>
       <div id="sidebar">
         <a href="main.php">Home</a>

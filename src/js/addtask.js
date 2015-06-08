@@ -17,3 +17,16 @@ var queryDB = function(querySt) {
     req.send(querySt);
   }
 };
+
+function taskadd() {
+  var noteForm = document.getElementById('addtask');
+  var params = 'type=addtaskdb';
+  var params += '&user=' + noteForm.elements['userident'].value;
+  var params += '&tname=' + noteForm.elements['taskname'].value;
+  var params += '&pname=' + noteForm.elements['projname'].value;
+  var params += '&tdesc=' + noteForm.elements['taskdesc'].value;
+  var params += '&due=' + noteForm.elements['duedt'].value;
+  var params += '&priority=' + noteForm.elements['priority'].value;
+  var params += '&notes=' + noteForm.elements['notes'].value;
+  queryDB(params);
+}
