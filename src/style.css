@@ -1,0 +1,54 @@
+#wrap {
+  width:100%;
+  margin:0 auto;
+}
+
+#header {
+  padding:1% 2%;
+  background:#4169E1;
+  text-align:center;
+}
+
+#main {
+  float:right;
+  padding:1%;
+  width:68%;
+}
+
+#error {
+  color:#00ff00;
+  font-weight:bold;
+}
+
+#notes {
+  width: 90px;
+  height: 390px;
+  border: 1px solid #999999;
+  padding: 5px;
+}
+
+#sidebar {
+  float:left;
+  padding:1%;
+  width:38%
+}
+
+#footer {
+  clear:both;
+  padding:1% 2%;
+  text-align:center;
+}
+
+/*table formatting comes from assignment 2*/
+table {
+  border-collapse:collapse; border:double;
+}
+
+table th,
+table td {
+  border:double; border-color:black;
+}
+
+img {
+  width:400px; height:180px;
+}
